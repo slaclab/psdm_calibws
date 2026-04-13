@@ -49,7 +49,7 @@ def __map_nested_dicts__(ob, func):
     else:
         return func(ob)
 
-object_id_re = re.compile("ObjectId\((.*)\)")
+object_id_re = re.compile("ObjectId\\((.*)\\)")
 def __parse_mongo_query_attr__(val):
     if isinstance(val, str):
         mt = object_id_re.match(val)
@@ -111,7 +111,7 @@ def svc_list_of_databases():
     """
     Get list of databases; skip the admin/local and other special databases.
     """
-    databases = [x for x in mongoclient.database_names() if x not in system_databases and x.startswith("cdb_")]
+    databases = [x for x in mongoclient.list_database_names() if x not in system_databases and x.startswith("cdb_")]
     return JSONEncoder().encode(databases)
 
 

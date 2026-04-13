@@ -1,0 +1,33 @@
+namespace: dev
+
+configMapGenerator:
+- name: psdmcalibconfigs
+  literals:
+  - CALIBDB_URL_FILE=/work/secrets/calibdb_url
+  - ROLEDB_URL_FILE=/work/secrets/roledb_url
+  - JWKS_URI=http://psdm.slac.stanford.edu/pcdstkn/keys
+  - LOG_LEVEL=DEBUG
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+bases:
+- ../../base
+
+images:
+- name: psdmcalib
+  newName: cr.stanford.edu/psdm/psdm_k8s_images/slaclab/psdmcalib
+  newTag: dev
+- name: psdmcalibapache
+  newName: cr.stanford.edu/psdm/psdm_k8s_images/slaclab/psweb_kerb
+  newTag: 0.0.4
+- name: pcdsrvpxjwt
+  newName: cr.stanford.edu/psdm/psdm_k8s_images/slaclab/pcdsrvpxjwt
+  newTag: 0.0.1
+
+secretGenerator:
+- name: psdmcalib-secrets
+  files:
+  - etc/.secrets/keytab
+  - etc/.secrets/calibdb_url
+  - etc/.secrets/roledb_url

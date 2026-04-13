@@ -1,0 +1,192 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: psdmcalib-httpdconf
+data:
+  10psdmcalib.conf: |
+    ProxyPreserveHost On
+
+    <Macro AuthKerberos $proxy $xscript>
+      AuthType GSSAPI
+      GssapiCredStore keytab:/etc/httpd/conf/secrets/keytab
+      GssapiBasicAuth Off
+      GssapiSSLonly Off
+      GssapiPublishErrors On
+      Require valid-user
+      RequestHeader set REMOTE-USER "%{GSS_NAME}e"
+      RequestHeader set "X-FORWARDED-AUTH-TYPE" "Kerberos"
+      RequestHeader set "X-SCRIPT-NAME" $xscript
+      ProxyPass $proxy
+      ProxyPassReverse $proxy
+    </Macro>
+
+    <Location /ws/calib_ws/>
+      ProxyPass http://localhost:5000/
+      ProxyPassReverse http://localhost:5000/
+      RequestHeader set X-SCRIPT-NAME "/calib_ws"
+      AllowMethods GET HEAD
+    </Location>
+
+    <Location /ws-kerb/calib_ws/>
+      Use AuthKerberos http://localhost:5000/ "/calib_ws"
+    </Location>
+---
+ kind: Deployment
+ apiVersion: apps/v1
+ metadata:
+   name: psdmcalib
+   labels:
+     app: psdmcalib
+ spec:
+   replicas: 1
+   selector:
+     matchLabels:
+       app: psdmcalib
+   template:
+     metadata:
+       labels:
+         app: psdmcalib
+     spec:
+      containers:
+      - name: psdmcalib
+        image: psdmcalib:latest
+        imagePullPolicy: Always
+        command: ["./runscripts/runprod.sh"]
+        envFrom:
+        - configMapRef:
+            name: psdmcalibconfigs
+        volumeMounts:
+        - name: psdmcalib-secrets
+          mountPath: /work/secrets
+          readOnly: true
+      initContainers:
+      - name: psdmcalibapache
+        image: psdmcalibapache:latest
+        imagePullPolicy: Always
+        command: ["httpd", "-D", "FOREGROUND"]
+        restartPolicy: Always 
+        envFrom:
+        - configMapRef:
+            name: psdmcalibconfigs
+        volumeMounts:
+          - name: psdmcalib-httpdconf
+            mountPath: /etc/httpd/conf.d/10psdmcalib.conf
+            subPath: 10psdmcalib.conf
+            readOnly: true
+          - name: psdmcalib-secrets
+            mountPath: /etc/httpd/conf/secrets
+            readOnly: true
+      - name: psdmcalibjwt
+        image: pcdsrvpxjwt:latest
+        imagePullPolicy: Always
+        restartPolicy: Always 
+        envFrom:
+        - configMapRef:
+            name: psdmcalibconfigs
+        volumeMounts:
+          - name: psdmcalib-secrets
+            mountPath: /work/secrets
+            readOnly: true
+      imagePullSecrets:
+      - name: crcred
+      volumes:
+      - name: psdmcalib-secrets
+        secret:
+          secretName: psdmcalib-secrets
+      - name: psdmcalib-httpdconf
+        configMap:
+          name: psdmcalib-httpdconf
+          items:
+            - key: 10psdmcalib.conf
+              path: 10psdmcalib.conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: psdmcalibapachesvc
+spec:
+  selector:
+    app: psdmcalib
+  ports:
+    - name: https
+      protocol: TCP
+      port: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: psdmcalibjwt
+spec:
+  selector:
+    app: psdmcalib
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8001
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: psdmcalibingress
+  annotations:
+    ingressClassName: nginx
+    nginx.ingress.kubernetes.io/whitelist-source-range: 172.16.0.0/12,134.79.0.0/16,129.57.0.0/16,192.70.245.0/24
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: 30s
+    nginx.ingress.kubernetes.io/proxy-read-timeout: 20s
+    nginx.ingress.kubernetes.io/client-max-body-size: 512m
+    nginx.ingress.kubernetes.io/proxy-body-size: 512m
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/affinity-mode: persistent
+    nginx.ingress.kubernetes.io/session-cookie-secure: "true"
+    nginx.ingress.kubernetes.io/session-cookie-samesite: "true"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/ssl-passthrough: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    nginx.ingress.kubernetes.io/rewrite-target: /$1/calib_ws/$2
+spec:
+  rules:
+  - host: psdm.slac.stanford.edu
+    http:
+      paths:
+      - path: /(ws|ws-kerb)/calib_ws/(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: psdmcalibapachesvc
+            port:
+              number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: psdmcalibjwtingress
+  annotations:
+    ingressClassName: nginx
+    nginx.ingress.kubernetes.io/whitelist-source-range: 172.16.0.0/12,134.79.0.0/16,129.57.0.0/16,192.70.245.0/24
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: 30s
+    nginx.ingress.kubernetes.io/proxy-read-timeout: 20s
+    nginx.ingress.kubernetes.io/client-max-body-size: 512m
+    nginx.ingress.kubernetes.io/proxy-body-size: 512m
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/affinity-mode: persistent
+    nginx.ingress.kubernetes.io/session-cookie-secure: "true"
+    nginx.ingress.kubernetes.io/session-cookie-samesite: "true"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/ssl-passthrough: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  rules:
+  - host: psdm.slac.stanford.edu
+    http:
+      paths:
+      - path: /ws-jwt/calib_ws/(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: psdmcalibjwt
+            port:
+              number: 8001

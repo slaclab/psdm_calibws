@@ -152,6 +152,7 @@ def svc_get_objects_in_collection(database, collection):
     These forms of query strings are supported
     * No query string implies all objects in a collection are returned
     * A query string with a single "query_string" parameter results in the value of this parameter being used as the query in the find call
+    * Alternatively, one can pass in the query as JSON
     * All other query strings are converted into a dict which is then used as the query in the find call.
     """
     if database in system_databases:
@@ -164,6 +165,10 @@ def svc_get_objects_in_collection(database, collection):
         query_string = request.args['query_string']
         logger.debug("Returning all objects in the collection %s in the database %s matching query %s", collection, database, query_string)
         return JSONEncoder().encode([x for x in expdb[collection].find(parse_query_string(query_string))])
+    elif request.is_json:
+        query = request.json
+        logger.debug("Returning all objects in the collection %s in the database %s matching query %s", collection, database, json.dumps(query))
+        return JSONEncoder().encode([x for x in expdb[collection].find(query)])
     else:
         logger.debug("Returning all objects in the collection %s in the database %s matching query %s", collection, database, json.dumps(request.args))
         return JSONEncoder().encode([x for x in expdb[collection].find(request.args)])

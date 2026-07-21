@@ -324,7 +324,7 @@ def svc_test_post_privilege(database):
     return JSONEncoder().encode({"status": True})
 
 
-@ws_service_blueprint.route("/<database>/test_edit_privilege", methods=["GET"])
+@ws_service_blueprint.route("/<database>/test_edit_privilege", methods=["GET", "POST", "PUT", "DELETE"])
 @context.security.authentication_required
 @database_is_a_calib_database()
 @privilege_required("edit")

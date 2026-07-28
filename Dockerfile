@@ -3,7 +3,7 @@ FROM python:3.14.3-alpine
 ENV TZ="America/Los_Angeles"
 ENV LANG=en_US.UTF-8
 
-RUN apk add bash
+RUN apk add bash openldap-clients
 
 COPY src/requirements.txt /
 

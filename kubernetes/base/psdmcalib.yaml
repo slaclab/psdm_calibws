@@ -13,6 +13,9 @@ data:
       GssapiBasicAuth Off
       GssapiSSLonly Off
       GssapiPublishErrors On
+      GssapiUseSessions On
+      Session On
+      SessionCookieName calib_session path=/ws-kerb/
       Require valid-user
       RequestHeader set REMOTE-USER "%{GSS_NAME}e"
       RequestHeader set "X-FORWARDED-AUTH-TYPE" "Kerberos"
@@ -31,6 +34,17 @@ data:
     <Location /ws-kerb/calib_ws/>
       Use AuthKerberos http://localhost:5000/ "/calib_ws"
     </Location>
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: psdmcalib-ldapconf
+data:
+  ldap.conf: |
+    BASE    dc=sdf,dc=slac,dc=stanford,dc=edu
+    URI ldap://sdfldapsrv.sdf.slac.stanford.edu
+    SASL_NOCANON    on
+    SASL_REALM    SDF.SLAC.STANFORD.EDU
 ---
  kind: Deployment
  apiVersion: apps/v1
@@ -60,6 +74,10 @@ data:
         - name: psdmcalib-secrets
           mountPath: /work/secrets
           readOnly: true
+        - name: psdmcalib-ldapconf
+          mountPath: /etc/openldap/ldap.conf
+          subPath: ldap.conf
+          readOnly: true
       initContainers:
       - name: psdmcalibapache
         image: psdmcalibapache:latest
@@ -88,6 +106,10 @@ data:
           - name: psdmcalib-secrets
             mountPath: /work/secrets
             readOnly: true
+          - name: psdmcalib-ldapconf
+            mountPath: /etc/openldap/ldap.conf
+            subPath: ldap.conf
+            readOnly: true
       imagePullSecrets:
       - name: crcred
       volumes:
@@ -100,6 +122,12 @@ data:
           items:
             - key: 10psdmcalib.conf
               path: 10psdmcalib.conf
+      - name: psdmcalib-ldapconf
+        configMap:
+          name: psdmcalib-ldapconf
+          items:
+            - key: ldap.conf
+              path: ldap.conf
 ---
 apiVersion: v1
 kind: Service

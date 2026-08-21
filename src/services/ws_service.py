@@ -282,10 +282,11 @@ def put_gridfs_document(database ) :
     if database in system_databases:
         return logAndAbort("Cannot get data for system databases")
     expdb = mongoclient[database]
-    if request.content_type.startswith("application/x-binary") or request.content_type.startswith("application/octet-stream"):
+    if request.content_type.startswith("application/json") or request.content_type.startswith("application/x-binary") or request.content_type.startswith("application/octet-stream"):
         if request.content_length <=0 or request.content_length >= 1*1024*1024*1024:
             return logAndAbort("For now, we limit the amount of data that can be put into GridFS to a GB - we received %s bytes" % request.content_length)
         binary_data = request.get_data()
+        logger.debug("Received binary data of length: %s First 100 bytes: %s", len(binary_data), binary_data[:100])
         fs = GridFS(expdb)
         oid = fs.put(binary_data)
         return JSONEncoder().encode({"_id": oid})

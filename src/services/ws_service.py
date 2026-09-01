@@ -168,10 +168,12 @@ def svc_get_objects_in_collection(database, collection):
     elif request.is_json:
         query = request.json
         logger.debug("Returning all objects in the collection %s in the database %s matching query %s", collection, database, json.dumps(query))
+        query = { k: ObjectId(v) if k == "_id" else v for k, v in query.items() }
         return JSONEncoder().encode([x for x in expdb[collection].find(query)])
     else:
         logger.debug("Returning all objects in the collection %s in the database %s matching query %s", collection, database, json.dumps(request.args))
-        return JSONEncoder().encode([x for x in expdb[collection].find(request.args)])
+        query = { k: ObjectId(v) if k == "_id" else v for k, v in request.args.items() }
+        return JSONEncoder().encode([x for x in expdb[collection].find(query)])
 
 @ws_service_blueprint.route("/<database>/gridfs/<file_id>", methods=["GET"])
 @database_is_a_calib_database()

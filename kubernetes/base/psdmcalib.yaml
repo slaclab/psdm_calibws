@@ -189,6 +189,39 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
+  name: psdmcalibingresslegacy
+  annotations:
+    ingressClassName: nginx
+    nginx.ingress.kubernetes.io/whitelist-source-range: 172.16.0.0/12,134.79.0.0/16,129.57.0.0/16,192.70.245.0/24
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: 30s
+    nginx.ingress.kubernetes.io/proxy-read-timeout: 20s
+    nginx.ingress.kubernetes.io/client-max-body-size: 512m
+    nginx.ingress.kubernetes.io/proxy-body-size: 512m
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/affinity-mode: persistent
+    nginx.ingress.kubernetes.io/session-cookie-secure: "true"
+    nginx.ingress.kubernetes.io/session-cookie-samesite: "true"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/ssl-passthrough: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    nginx.ingress.kubernetes.io/rewrite-target: /ws/calib_ws/$1
+spec:
+  rules:
+  - host: psdm.slac.stanford.edu
+    http:
+      paths:
+      - path: /calib_ws/(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: psdmcalibapachesvc
+            port:
+              number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
   name: psdmcalibjwtingress
   annotations:
     ingressClassName: nginx

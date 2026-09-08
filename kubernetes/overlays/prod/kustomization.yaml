@@ -1,4 +1,4 @@
-namespace: dev
+namespace: prod
 
 configMapGenerator:
 - name: psdmcalibconfigs
@@ -6,7 +6,7 @@ configMapGenerator:
   - CALIBDB_URL_FILE=/work/secrets/calibdb_url
   - ROLEDB_URL_FILE=/work/secrets/roledb_url
   - JWKS_URI=https://psdm.slac.stanford.edu/pcdstkn/keys
-  - LOG_LEVEL=DEBUG
+  - LOG_LEVEL=INFO
 
 generatorOptions:
   disableNameSuffixHash: true
@@ -17,10 +17,10 @@ bases:
 images:
 - name: psdmcalib
   newName: cr.stanford.edu/psdm/psdm_k8s_images/slaclab/psdmcalib
-  newTag: dev
+  newTag: 0.0.1
 - name: psdmcalibapache
   newName: cr.stanford.edu/psdm/psdm_k8s_images/slaclab/psweb_kerb
-  newTag: dev
+  newTag: 0.0.5
 - name: pcdsrvpxjwt
   newName: cr.stanford.edu/psdm/psdm_k8s_images/slaclab/pcdsrvpxjwt
   newTag: 0.0.1
@@ -32,25 +32,34 @@ secretGenerator:
   - etc/.secrets/calibdb_url
   - etc/.secrets/roledb_url
 
+patches:
+  - target:
+      kind: Deployment
+      name: psdmcalib
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 4
+
 patchesJson6902:
 - target:
-    kind: Deployment
-    name: psdmcalib
+    kind: Ingress
+    name: psdmcalibingress-open
   patch: |-
     - op: replace
-      path: /spec/template/spec/containers/0/imagePullPolicy
-      value: Always
+      path: /spec/rules/0/host
+      value: pswww.slac.stanford.edu
 - target:
-    kind: Deployment
-    name: psdmcalib
+    kind: Ingress
+    name: psdmcalibingress-kerb
   patch: |-
     - op: replace
-      path: /spec/template/spec/initContainers/0/imagePullPolicy
-      value: Always
+      path: /spec/rules/0/host
+      value: pswww.slac.stanford.edu
 - target:
-    kind: Deployment
-    name: psdmcalib
+    kind: Ingress
+    name: psdmcalibingress-jwt
   patch: |-
     - op: replace
-      path: /spec/template/spec/initContainers/1/imagePullPolicy
-      value: Always
+      path: /spec/rules/0/host
+      value: pswww.slac.stanford.edu

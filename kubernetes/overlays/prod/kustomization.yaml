@@ -6,7 +6,7 @@ configMapGenerator:
   - CALIBDB_URL_FILE=/work/secrets/calibdb_url
   - ROLEDB_URL_FILE=/work/secrets/roledb_url
   - JWKS_URI=https://psdm.slac.stanford.edu/pcdstkn/keys
-  - LOG_LEVEL=INFO
+  - LOG_LEVEL=DEBUG
 
 generatorOptions:
   disableNameSuffixHash: true
@@ -17,7 +17,7 @@ bases:
 images:
 - name: psdmcalib
   newName: cr.stanford.edu/psdm/psdm_k8s_images/slaclab/psdmcalib
-  newTag: 0.0.1
+  newTag: 0.0.3
 - name: psdmcalibapache
   newName: cr.stanford.edu/psdm/psdm_k8s_images/slaclab/psweb_kerb
   newTag: 0.0.5

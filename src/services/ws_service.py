@@ -158,7 +158,7 @@ def svc_get_objects_in_collection(database, collection):
     if database in system_databases:
         return logAndAbort("Cannot get data for system databases")
     expdb = mongoclient[database]
-    if not len(request.args):
+    if not len(request.args) and not request.is_json:
         logger.debug("Returning all objects in the collection %s in the database %s", collection, database)
         return JSONEncoder().encode([x for x in expdb[collection].find()])
     elif 'query_string' in request.args:
@@ -169,6 +169,7 @@ def svc_get_objects_in_collection(database, collection):
         query = request.json
         logger.debug("Returning all objects in the collection %s in the database %s matching query %s", collection, database, json.dumps(query))
         query = { k: ObjectId(v) if k == "_id" else v for k, v in query.items() }
+        logger.debug("Returning all objects in the collection %s in the database %s matching query %s", collection, database, json.dumps(query))
         return JSONEncoder().encode([x for x in expdb[collection].find(query)])
     else:
         logger.debug("Returning all objects in the collection %s in the database %s matching query %s", collection, database, json.dumps(request.args))
